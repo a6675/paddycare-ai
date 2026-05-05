@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaddyCare AI</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#7c584a">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #7c584a; 
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #f4ece1;
+        }
+
+        .app-container {
+            width: 95%;
+            max-width: 1100px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* --- MAIN MENU GRID --- */
+        #main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .folder-card {
+            background: #e9dcc3;
+            padding: 30px;
+            border-radius: 5px 40px 5px 5px;
+            color: #333;
+            text-decoration: none; /* For the PDF links */
+            cursor: pointer;
+            box-shadow: 8px 8px 15px rgba(0,0,0,0.3);
+            transition: transform 0.3s, background 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 180px;
+        }
+
+        .folder-card:hover {
+            transform: translateY(-10px);
+            background: #f5ead6;
+        }
+
+        .folder-card h2 { margin-top: 0; color: #4a3728; }
+        .folder-card p { font-size: 0.95rem; line-height: 1.4; }
+
+        /* --- SCAN PAGE --- */
+        #scan-page {
+            display: none;
+            background-color: #fdfaf5;
+            color: #4a3728;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .scan-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            align-items: center;
+        }
+
+        #media-container {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #000;
+            border: 4px solid #8d7558;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        video, #uploaded-image { width: 100%; height: 100%; object-fit: cover; }
+
+        .controls { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-action { background: #8d7558; color: white; }
+        .btn-back { background: #4a3728; color: white; margin-bottom: 20px; }
+
+        .result-box {
+            background: #eee;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 8px solid #8d7558;
+            text-align: left;
+        }
+
+        #ai-status { font-size: 0.8rem; margin-top: 10px; color: #8d7558; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div id="main-menu">
+            <h1 style="font-size: 3.5rem; margin: 0;">PaddyCare</h1>
+            <p style="font-style: italic; font-size: 1.2rem; opacity: 0.9;">Smart Rice Disease Detection System</p>
+            
+            <div class="menu-grid">
+                <div class="folder-card" onclick="showScanner()">
+                    <h2>Scanner</h2>
+                    <p>Identify rice diseases instantly using your camera or an uploaded photo.</p>
+                </div>
+
+                <a href="module.pdf" target="_blank" class="folder-card">
+                    <h2>Module</h2>
+                    <p>Detailed information and guides about different types of paddy diseases.</p>
+                </a>
+
+                <a href="about.pdf" target="_blank" class="folder-card">
+                    <h2>About</h2>
+                    <p>Learn more about the PaddyCare project and the team behind it.</p>
+                </a>
+            </div>
+        </div>
+
+        <div id="scan-page">
+            <button class="btn-back" onclick="location.reload()">← Back to Menu</button>
+            <div class="scan-layout">
+                <div>
+                    <h2>let's scan!!</h2>
+                    <div id="media-container">
+                        <video id="webcam" autoplay playsinline></video>
+                        <img id="uploaded-image" style="display:none;">
+                    </div>
+                    <div class="controls">
+                        <button class="btn-action" onclick="startWebcam()">Live Camera</button>
+                        <button class="btn-action" onclick="document.getElementById('fileInput').click()">Upload File</button>
+                        <input type="file" id="fileInput" hidden accept="image/*" onchange="handleUpload(event)">
+                    </div>
+                    <p id="ai-status">Initializing AI Brain...</p>
+                </div>
+
+                <div>
+                    <h2>analysis result</h2>
+                    <div class="result-box">
+                        <div id="label-container" style="font-size: 1.4rem; color: #7c584a;">
+                            Waiting for scan...
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 0.9rem; color: #666;">
+                        Classes: Bintik Perang, Hawar Bulir, Hawar Seludang, Karah, Healthy Paddy.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const imgDisplay = document.getElementById('uploaded-image');
+        const statusText = document.getElementById('ai-status');
+        const labelContainer = document.getElementById('label-container');
+
+        let model;
+        const class_list = ['Bintik Perang', 'Hawar Bulir Bakteria', 'Hawar Seludang', 'Healthy paddy', 'Karah Rice Blast'];
+
+        async function init() {
+            try {
+                model = await tf.loadLayersModel('./model.json');
+                statusText.innerText = "AI System Online ✅";
+            } catch (e) {
+                statusText.innerText = "Error: Check if model.json is in your GitHub folder.";
+            }
+        }
+
+        function showScanner() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('scan-page').style.display = 'block';
+            startWebcam();
+        }
+
+        async function startWebcam() {
+            imgDisplay.style.display = 'none';
+            video.style.display = 'block';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+            } catch (err) { statusText.innerText = "Camera error."; }
+        }
+
+        function handleUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); }
+                video.style.display = 'none';
+                imgDisplay.style.display = 'block';
+                imgDisplay.src = URL.createObjectURL(file);
+                setTimeout(predict, 500); 
+            }
+        }
+
+        async function predict() {
+            if (!model) return;
+            const source = video.style.display !== 'none' ? video : imgDisplay;
+            if (video.style.display !== 'none' && video.readyState !== 4) return;
+
+            const logits = tf.tidy(() => {
+                const img = tf.browser.fromPixels(source).resizeNearestNeighbor([224, 224]).toFloat().div(tf.scalar(255.0)).expandDims();
+                return model.predict(img);
+            });
+
+            const predictions = await logits.data();
+            const highestIndex = predictions.indexOf(Math.max(...predictions));
+            
+            labelContainer.innerHTML = `
+                <b>${class_list[highestIndex]}</b><br>
+                <small>Confidence: ${(predictions[highestIndex] * 100).toFixed(2)}%</small>
+            `;
+            logits.dispose();
+        }
+
+        setInterval(() => { if (video.style.display !== 'none') predict(); }, 1000);
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
