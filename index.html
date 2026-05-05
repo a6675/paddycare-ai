@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PaddyCare AI</title>
     
-    <link rel="manifest" href="manifest.json.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#7c584a">
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -29,6 +29,7 @@
             padding: 20px;
         }
 
+        /* --- LOGO STYLING --- */
         .main-logo {
             width: 150px;
             height: 150px;
@@ -39,6 +40,7 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
+        /* --- MAIN MENU GRID --- */
         #main-menu {
             display: flex;
             flex-direction: column;
@@ -68,9 +70,15 @@
             min-height: 180px;
         }
 
-        .folder-card:hover { transform: translateY(-10px); background: #f5ead6; }
-        .folder-card h2 { margin-top: 0; color: #4a3728; }
+        .folder-card:hover {
+            transform: translateY(-10px);
+            background: #f5ead6;
+        }
 
+        .folder-card h2 { margin-top: 0; color: #4a3728; }
+        .folder-card p { font-size: 0.95rem; line-height: 1.4; }
+
+        /* --- SCAN PAGE --- */
         #scan-page {
             display: none;
             background-color: #fdfaf5;
@@ -122,31 +130,33 @@
             text-align: left;
         }
 
-        #ai-status { font-size: 0.9rem; margin-top: 10px; font-weight: bold; color: #d32f2f; }
+        #ai-status { font-size: 0.8rem; margin-top: 10px; color: #8d7558; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
+        
         <div id="main-menu">
-            <img src="logo paddy.jpg" alt="Logo" class="main-logo">
-            <h1 style="font-size: 3rem; margin: 0;">PaddyCare</h1>
-            <p style="opacity: 0.9;">Smart Rice Disease Detection System</p>
+            <img src="logo paddy.jpg" alt="PaddyCare Logo" class="main-logo">
+            
+            <h1 style="font-size: 3.5rem; margin: 0;">PaddyCare</h1>
+            <p style="font-style: italic; font-size: 1.2rem; opacity: 0.9;">Smart Rice Disease Detection System</p>
             
             <div class="menu-grid">
                 <div class="folder-card" onclick="showScanner()">
                     <h2>Scanner</h2>
-                    <p>Tap here to start analysis.</p>
+                    <p>Identify rice diseases instantly using your camera or an uploaded photo.</p>
                 </div>
 
                 <a href="Modul PaddyCare.pdf" target="_blank" class="folder-card">
                     <h2>Module</h2>
-                    <p>Read the disease guide.</p>
+                    <p>Detailed guide on rice diseases, symptoms, and solutions.</p>
                 </a>
 
                 <a href="about.pdf" target="_blank" class="folder-card">
                     <h2>About</h2>
-                    <p>About the team.</p>
+                    <p>Learn more about the PaddyCare project and the team behind it.</p>
                 </a>
             </div>
         </div>
@@ -155,26 +165,29 @@
             <button class="btn-back" onclick="location.reload()">← Back to Menu</button>
             <div class="scan-layout">
                 <div>
-                    <h2>Live Analysis</h2>
+                    <h2>let's scan!!</h2>
                     <div id="media-container">
                         <video id="webcam" autoplay playsinline></video>
                         <img id="uploaded-image" style="display:none;">
                     </div>
                     <div class="controls">
-                        <button class="btn-action" onclick="startWebcam()">Camera</button>
-                        <button class="btn-action" onclick="document.getElementById('fileInput').click()">Upload</button>
+                        <button class="btn-action" onclick="startWebcam()">Live Camera</button>
+                        <button class="btn-action" onclick="document.getElementById('fileInput').click()">Upload File</button>
                         <input type="file" id="fileInput" hidden accept="image/*" onchange="handleUpload(event)">
                     </div>
-                    <p id="ai-status">Connecting to AI Brain...</p>
+                    <p id="ai-status">Initializing AI Brain...</p>
                 </div>
 
                 <div>
-                    <h2>Result</h2>
+                    <h2>analysis result</h2>
                     <div class="result-box">
-                        <div id="label-container" style="font-size: 1.5rem; color: #7c584a; font-weight: bold;">
-                            Starting scanner...
+                        <div id="label-container" style="font-size: 1.4rem; color: #7c584a;">
+                            Waiting for scan...
                         </div>
                     </div>
+                    <p style="margin-top: 20px; font-size: 0.9rem; color: #666;">
+                        Classes: Bintik Perang, Hawar Bulir, Hawar Seludang, Karah, Healthy Paddy.
+                    </p>
                 </div>
             </div>
         </div>
@@ -187,18 +200,15 @@
         const labelContainer = document.getElementById('label-container');
 
         let model;
-        // Classes from your model
+        // Updated class list to match your trained model
         const class_list = ['Bintik Perang', 'Hawar Bulir Bakteria', 'Hawar Seludang', 'Healthy paddy', 'Karah Rice Blast'];
 
         async function init() {
             try {
-                // This must match your GitHub filename exactly
-                model = await tf.loadLayersModel('model.json');
+                model = await tf.loadLayersModel('./model.json');
                 statusText.innerText = "AI System Online ✅";
-                statusText.style.color = "#2e7d32";
             } catch (e) {
-                console.error(e);
-                statusText.innerText = "Error: Check if model.json and model.weights.bin are in your GitHub.";
+                statusText.innerText = "Error: Check if model.json is in your GitHub folder.";
             }
         }
 
@@ -214,7 +224,7 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
-            } catch (err) { statusText.innerText = "Camera Access Denied."; }
+            } catch (err) { statusText.innerText = "Camera error."; }
         }
 
         function handleUpload(event) {
@@ -224,7 +234,7 @@
                 video.style.display = 'none';
                 imgDisplay.style.display = 'block';
                 imgDisplay.src = URL.createObjectURL(file);
-                setTimeout(predict, 1000); 
+                setTimeout(predict, 500); 
             }
         }
 
@@ -234,26 +244,21 @@
             if (video.style.display !== 'none' && video.readyState !== 4) return;
 
             const logits = tf.tidy(() => {
-                const img = tf.browser.fromPixels(source)
-                    .resizeNearestNeighbor([224, 224])
-                    .toFloat()
-                    .div(tf.scalar(255.0)) // Normalization (matches your Python script)
-                    .expandDims();
+                const img = tf.browser.fromPixels(source).resizeNearestNeighbor([224, 224]).toFloat().div(tf.scalar(255.0)).expandDims();
                 return model.predict(img);
             });
 
             const predictions = await logits.data();
             const highestIndex = predictions.indexOf(Math.max(...predictions));
-            const confidence = (predictions[highestIndex] * 100).toFixed(1);
             
             labelContainer.innerHTML = `
-                ${class_list[highestIndex]}<br>
-                <span style="font-size: 1rem; color: #888;">Confidence: ${confidence}%</span>
+                <b>${class_list[highestIndex]}</b><br>
+                <small>Confidence: ${(predictions[highestIndex] * 100).toFixed(2)}%</small>
             `;
             logits.dispose();
         }
 
-        setInterval(() => { if (video.style.display !== 'none') predict(); }, 1500);
+        setInterval(() => { if (video.style.display !== 'none') predict(); }, 1000);
         init();
 
         if ('serviceWorker' in navigator) {
@@ -261,5 +266,4 @@
         }
     </script>
 </body>
-</html>
 </html>
