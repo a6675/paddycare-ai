@@ -1,1 +1,0 @@
-# paddycare-ai
