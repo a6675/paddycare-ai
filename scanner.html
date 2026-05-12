@@ -11,6 +11,7 @@
         body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
         .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         
+        /* Bekas video yang stabil */
         #video-container { 
             width: 100%; aspect-ratio: 1; background: #000; border-radius: 10px; 
             overflow: hidden; margin-bottom: 15px; border: 3px solid #8d7558; position: relative;
@@ -38,8 +39,8 @@
         <p id="loading-msg">Memuatkan model AI...</p>
 
         <div id="video-container">
-            <video id="webcam" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></video>
-            <img id="preview" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+            <video id="webcam" autoplay playsinline></video>
+            <img id="preview" style="display:none">
         </div>
 
         <button type="button" class="btn-switch" onclick="switchCamera()">
@@ -64,6 +65,7 @@
         let currentStream; 
         let useFrontCamera = false; 
 
+        // Senarai kelas (AI akan sentiasa pilih salah satu dari ini)
         const CLASS_LIST = [
             'Bacteria Panicle Blight', 'Brown Spot', 'Oryza Sativa (Normal)', 
             'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'
@@ -83,18 +85,23 @@
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
+
             const video = document.getElementById('webcam');
             const preview = document.getElementById('preview');
             preview.style.display = 'none';
             video.style.display = 'block';
 
             const mode = useFrontCamera ? "user" : "environment";
+
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: mode, width: { ideal: 720 }, height: { ideal: 720 } } 
+                });
                 video.srcObject = currentStream;
-                video.play();
+                // Pastikan video dimainkan
+                video.onloadedmetadata = () => { video.play(); };
             } catch (err) {
-                alert("Kamera gagal diakses.");
+                alert("Kamera gagal diakses: " + err);
             }
         }
 
@@ -118,6 +125,7 @@
             }
         }
 
+        // FUNGSI ANALISIS (SNAP & PREDICT)
         async function predict() {
             if (!model) return;
 
@@ -125,53 +133,43 @@
             const preview = document.getElementById('preview');
             const statusTarget = document.getElementById('status');
 
-            statusTarget.innerText = "Status: Menganalisis...";
+            statusTarget.innerText = "Status: Menangkap Gambar...";
 
-            // Determine image source
-            let imgSource;
-            if (video.style.display !== 'none' && video.readyState >= video.HAVE_CURRENT_DATA) {
-                // If live video is active and has data, snap a frame
+            // LOGIK CAPTURE/SNAP
+            if (video.style.display !== 'none') {
                 const canvas = document.createElement('canvas');
+                // Gunakan saiz sebenar video
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                preview.src = canvas.toDataURL('image/png');
-                imgSource = preview;
                 
-                // Optional: Stop current stream after snap to save resources
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Tukar video ke imej pegun
+                preview.src = canvas.toDataURL('image/png');
+                preview.style.display = 'block';
+                video.style.display = 'none';
+
+                // Hentikan kamera untuk 'freeze' skrin
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
-                
-                // Show the snapped frame, hide video
-                preview.style.display = 'block';
-                video.style.display = 'none';
-            } else if (preview.style.display !== 'none' && preview.src) {
-                // If a gallery image is already showing, use that
-                imgSource = preview;
-            } else {
-                 statusTarget.innerText = "Status: Sedia (Tiada Imej)";
-                 return; // No image source available
             }
 
-            // Process with TensorFlow.js
-            const tensor = tf.browser.fromPixels(imgSource)
+            statusTarget.innerText = "Status: Menganalisis...";
+
+            // PROSES AI
+            const tensor = tf.browser.fromPixels(preview)
                 .resizeNearestNeighbor([224, 224])
                 .toFloat()
                 .expandDims();
 
             const predictions = await model.predict(tensor).data();
+            const topIndex = predictions.indexOf(Math.max(...predictions));
+            const confidence = (Math.max(...predictions) * 100).toFixed(1);
             
-            const maxConfidence = Math.max(...predictions);
-            const topIndex = predictions.indexOf(maxConfidence);
-            
-            const THRESHOLD = 0.6; 
-
-            if (maxConfidence < THRESHOLD) {
-                document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> <span style="color:red;">Padi Tidak Dikenal Pasti</span><br><small>(Sila ambil gambar yang lebih jelas)</small>`;
-            } else {
-                document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]} <br><small>Keyakinan: ${(maxConfidence * 100).toFixed(1)}%</small>`;
-            }
+            // Paparkan hasil (AI akan sentiasa beri jawapan dari CLASS_LIST)
+            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]} <br><small>Keyakinan: ${confidence}%</small>`;
             
             statusTarget.innerText = "Status: Selesai";
         }
