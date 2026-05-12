@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaddyCare AI - Scanner & Info</title>
+    <title>PaddyCare AI - Scanner Fast Sync</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     
     <style>
-        /* Gaya Visual Scanner */
-        body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 15px; }
+        .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         
         #video-container { 
             width: 100%; aspect-ratio: 1; background: #000; border-radius: 10px; 
@@ -18,129 +17,113 @@
         }
         video, img { width: 100%; height: 100%; object-fit: cover; }
 
-        .btn { background: #4a3728; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; transition: 0.3s; }
-        .btn:hover { opacity: 0.9; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-        
-        .btn-orange { background: #e67e22; border: 2px solid #d35400; border-radius: 50px; width: 85%; margin: 10px auto; display: block; }
-        .btn-green { background: #2ecc71; }
-        .btn-info { background: #2980b9; display: none; margin-top: 10px; animation: pulse 1.5s infinite; }
+        .btn { background: #4a3728; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; }
+        .btn-green { background: #2ecc71; margin-top: 10px; }
+        .btn:disabled { background: #ccc; }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); }
-        }
-
-        .result-box { background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 8px solid #8d7558; text-align: left; }
+        /* Kotak Hasil Analisis */
+        .result-box { background: #fff; padding: 15px; border-radius: 8px; margin-top: 15px; border: 2px solid #8d7558; text-align: left; color: #333; }
         
-        /* Gaya Modul Maklumat (Popup/Detail) */
-        #detail-section {
-            display: none; background: white; padding: 20px; border-radius: 10px; 
-            border: 2px solid #7d5243; margin-top: 20px; text-align: left;
-        }
-        .disease-title { color: #b03a2e; text-align: center; text-transform: uppercase; margin-bottom: 5px; }
-        .option-menu { display: flex; justify-content: space-around; margin: 15px 0; gap: 5px; }
-        .opt-btn { flex: 1; padding: 10px 5px; border: none; border-radius: 5px; background: #2e7d32; color: white; cursor: pointer; font-size: 11px; font-weight: bold; }
-        #content-display { background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; font-size: 14px; }
-        .lang-en { color: #2e7d32; font-weight: bold; display: block; }
-        .lang-bm { color: #5d4037; font-weight: bold; display: block; margin-top: 10px; }
-        .definition-box { background: #fff3e0; padding: 10px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #ff9800; font-size: 13px; }
+        /* Kotak Maklumat Automatik */
+        #auto-info { display: none; margin-top: 15px; text-align: left; background: #fff; border-radius: 10px; padding: 15px; border-top: 5px solid #b03a2e; }
+        .info-title { color: #b03a2e; font-weight: bold; font-size: 18px; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .sci-name { font-style: italic; font-size: 13px; color: #666; margin-bottom: 10px; display: block; }
+        
+        h4 { margin: 15px 0 5px 0; color: #2e7d32; font-size: 15px; text-transform: uppercase; }
+        ul { margin: 0; padding-left: 20px; font-size: 14px; }
+        li { margin-bottom: 3px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <button class="btn" onclick="window.location.href='index.html'">← KEMBALI KE MENU</button>
-        <h2>AI Paddy Scanner</h2>
-        <p id="loading-msg" style="color:#8d7558; font-weight:bold;">Memuatkan AI...</p>
+        <button class="btn" onclick="window.location.href='index.html'">← MENU</button>
+        <h2 style="margin:10px 0;">AI Scanner</h2>
 
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
             <img id="preview" style="display:none">
         </div>
 
-        <button class="btn btn-orange" onclick="switchCamera()">🔄 TUKAR KAMERA</button>
-        <button class="btn" onclick="startCamera()">1. AKTIFKAN KAMERA</button>
-        <button class="btn" onclick="document.getElementById('file-input').click()">2. GALERI</button>
+        <button class="btn" style="background:#e67e22" onclick="switchCamera()">🔄 TUKAR KAMERA</button>
+        <div style="display: flex; gap: 5px;">
+            <button class="btn" style="flex:1" onclick="startCamera()">KAMERA</button>
+            <button class="btn" style="flex:1" onclick="document.getElementById('file-input').click()">GALERI</button>
+        </div>
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(event)">
         
         <button class="btn btn-green" id="predict-btn" disabled onclick="predict()">3. MULA ANALISIS AI</button>
         
         <div class="result-box">
             <div id="status">Status: Sedia</div>
-            <div id="prediction"><strong>Hasil:</strong> -</div>
-            <button id="info-btn" class="btn btn-info" onclick="toggleInfo()">📘 LIHAT INFO RAWATAN</button>
+            <div id="prediction" style="font-size: 18px;"><strong>Hasil:</strong> -</div>
         </div>
 
-        <div id="detail-section">
-            <h3 id="current-disease-name" class="disease-title"></h3>
-            <p id="scientific-name" style="text-align:center; font-style:italic; font-size:12px;"></p>
-            <div id="definition-display" class="definition-box"></div>
-            <div class="option-menu">
-                <button class="opt-btn" onclick="showInfo('symptoms')">SIMPTOM</button>
-                <button class="opt-btn" onclick="showInfo('causes')">PUNCA</button>
-                <button class="opt-btn" onclick="showInfo('solution')">RAWATAN</button>
+        <div id="auto-info">
+            <div id="info-header">
+                <span class="info-title" id="dis-name">Nama Penyakit</span>
+                <span class="sci-name" id="dis-sci">Scientific Name</span>
             </div>
-            <div id="content-display">Klik butang di atas untuk maklumat.</div>
-            <button class="btn" style="background:#8d7558; margin-top:15px;" onclick="toggleInfo()">TUTUP INFO</button>
+            
+            <h4>Simptom:</h4>
+            <div id="dis-symp"></div>
+
+            <h4>Punca:</h4>
+            <div id="dis-cause"></div>
+
+            <h4>Penyelesaian:</h4>
+            <div id="dis-sol"></div>
         </div>
     </div>
 
     <script>
         let model; let currentStream; let useFrontCamera = false;
-        let lastResultKey = ""; // Simpan key penyakit terakhir dikesan
 
         const CLASS_LIST = [
             'Bacterial Panicle Blight', 'Brown Spot', 'Oryza Sativa (Normal)', 
             'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'
         ];
 
-        // Database Modul anda (Disesuaikan dengan CLASS_LIST)
-        const diseaseData = {
+        // Database Maklumat Penyakit
+        const db = {
             'Sheath Blight': {
                 name: "HAWAR SELUDANG", sci: "Rhizoctonia solani",
-                def: "Penyakit kulat menyerang seludang daun, pokok nampak seperti terbakar.",
-                symptoms: "<span class='lang-bm'>Simptom:</span><ul><li>Lesi coklat pada seludang</li><li>Pokok kelihatan terbakar</li></ul>",
-                causes: "<span class='lang-bm'>Punca:</span><ul><li>Kulat tanah</li><li>Sisa tanaman lama</li></ul>",
-                solution: "<span class='lang-bm'>Penyelesaian:</span><ul><li>Jarak tanam sesuai</li><li>Kawal air</li><li>Racun kulat</li></ul>"
+                symp: "<ul><li>Lesi coklat pada seludang</li><li>Pokok kelihatan terbakar</li></ul>",
+                cause: "<ul><li>Kulat tanah Rhizoctonia</li><li>Sisa tanaman lama</li></ul>",
+                sol: "<ul><li>Jarak tanam sesuai</li><li>Kawal air & guna racun kulat</li></ul>"
             },
             'Rice Blast': {
-                name: "KARAH PADI", sci: "Pyricularia oryzae",
-                def: "Menyerang daun (karah daun) dan leher tangkai (karah tangkai).",
-                symptoms: "<span class='lang-bm'>Simptom:</span><ul><li>Tompok bentuk berlian</li><li>Leher padi patah/kosong</li></ul>",
-                causes: "<span class='lang-bm'>Punca:</span><ul><li>Spora bawaan angin/hujan</li><li>Nitrogen berlebihan</li></ul>",
-                solution: "<span class='lang-bm'>Penyelesaian:</span><ul><li>Varieti tahan</li><li>Kawal baja N</li><li>Racun kulat</li></ul>"
+                name: "KARAH (RICE BLAST)", sci: "Pyricularia oryzae",
+                symp: "<ul><li>Tompok bentuk berlian</li><li>Bulir padi menjadi hampa/kosong</li></ul>",
+                cause: "<ul><li>Spora bawaan angin & hujan</li></ul>",
+                sol: "<ul><li>Guna varieti tahan</li><li>Kawal baja Nitrogen</li></ul>"
             },
             'Bacterial Panicle Blight': {
                 name: "HAWAR BULIR BAKTERIA", sci: "Burkholderia glumae",
-                def: "Menyerang bulir semasa berbunga, menyebabkan padi hampa.",
-                symptoms: "<span class='lang-bm'>Simptom:</span><ul><li>Bulir kosong/hitam</li><li>Tangkai tegak (sebab ringan)</li></ul>",
-                causes: "<span class='lang-bm'>Punca:</span><ul><li>Bakteria bawaan benih</li><li>Cuaca panas/lembap</li></ul>",
-                solution: "<span class='lang-bm'>Penyelesaian:</span><ul><li>Benih bersih</li><li>Ubah tarikh tanam</li></ul>"
+                symp: "<ul><li>Bulir kosong & hitam</li><li>Tangkai padi tegak mendongak</li></ul>",
+                cause: "<ul><li>Bakteria bawaan benih</li></ul>",
+                sol: "<ul><li>Guna benih bersih</li><li>Ubah tarikh penanaman</li></ul>"
             },
             'Brown Spot': {
                 name: "BINTIK PERANG", sci: "Helminthosporium oryzae",
-                def: "Bintik coklat bulat pada daun, tanda tanah kurang subur.",
-                symptoms: "<span class='lang-bm'>Simptom:</span><ul><li>Bintik coklat kecil</li><li>Daun kering</li></ul>",
-                causes: "<span class='lang-bm'>Punca:</span><ul><li>Tanah kurang nutrien/potassium</li></ul>",
-                solution: "<span class='lang-bm'>Penyelesaian:</span><ul><li>Baja seimbang</li><li>Rawatan benih</li></ul>"
+                symp: "<ul><li>Bintik coklat bulat pada daun</li><li>Daun menjadi kering</li></ul>",
+                cause: "<ul><li>Tanah kurang nutrien (Potassium)</li></ul>",
+                sol: "<ul><li>Baja seimbang</li><li>Rawatan benih</li></ul>"
             },
             'Pseudomonas Fuscovaginae': {
                 name: "SAMBANG", sci: "Pseudomonas fuscovaginae",
-                def: "Bakteria menyerang seludang, menyebabkan bijirin tidak berisi penuh.",
-                symptoms: "<span class='lang-bm'>Simptom:</span><ul><li>Seludang coklat/lebam</li><li>Bulir rosak</li></ul>",
-                causes: "<span class='lang-bm'>Punca:</span><ul><li>Bakteria melalui air/benih</li></ul>",
-                solution: "<span class='lang-bm'>Penyelesaian:</span><ul><li>Sanitasi ladang</li><li>Varieti tahan</li></ul>"
+                symp: "<ul><li>Seludang coklat lebam</li><li>Bulir tidak terisi penuh</li></ul>",
+                cause: "<ul><li>Bakteria melalui air & benih</li></ul>",
+                sol: "<ul><li>Sanitasi ladang</li><li>Benih bebas penyakit</li></ul>"
             }
         };
 
         async function loadModel() {
             try {
                 model = await tf.loadLayersModel('model_tfjs/model.json');
-                document.getElementById('loading-msg').innerText = "Model AI Sedia!";
+                document.getElementById('loading-msg').innerText = "Model Sedia!";
                 document.getElementById('predict-btn').disabled = false;
-            } catch (err) { document.getElementById('loading-msg').innerText = "Ralat Muat Model!"; }
+            } catch (e) { document.getElementById('loading-msg').innerText = "Model Gagal!"; }
         }
 
         async function startCamera() {
@@ -149,9 +132,10 @@
             document.getElementById('preview').style.display = 'none';
             video.style.display = 'block';
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: useFrontCamera?"user":"environment" } });
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: useFrontCamera?"user":"environment" }});
                 video.srcObject = currentStream;
-            } catch (err) { alert("Kamera Gagal!"); }
+                video.onloadedmetadata = () => video.play();
+            } catch (e) { alert("Kamera Gagal!"); }
         }
 
         function switchCamera() { useFrontCamera = !useFrontCamera; if (currentStream) startCamera(); }
@@ -160,11 +144,11 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = (ev) => {
                     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
                     document.getElementById('webcam').style.display = 'none';
                     const pre = document.getElementById('preview');
-                    pre.style.display = 'block'; pre.src = event.target.result;
+                    pre.style.display = 'block'; pre.src = ev.target.result;
                 };
                 reader.readAsDataURL(file);
             }
@@ -174,7 +158,8 @@
             const video = document.getElementById('webcam');
             const preview = document.getElementById('preview');
             const status = document.getElementById('status');
-            
+            const infoBox = document.getElementById('auto-info');
+
             if (video.style.display !== 'none') {
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -188,38 +173,24 @@
             const tensor = tf.browser.fromPixels(preview).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
             const preds = await model.predict(tensor).data();
             const idx = preds.indexOf(Math.max(...preds));
-            const resultLabel = CLASS_LIST[idx];
+            const result = CLASS_LIST[idx];
 
-            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${resultLabel}`;
+            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${result}`;
             status.innerText = "Selesai";
 
-            // Tunjukkan butang info jika penyakit dikesan (Bukan Normal)
-            if (diseaseData[resultLabel]) {
-                lastResultKey = resultLabel;
-                document.getElementById('info-btn').style.display = 'block';
+            // AUTO SYNC INFO
+            if (db[result]) {
+                const data = db[result];
+                document.getElementById('dis-name').innerText = data.name;
+                document.getElementById('dis-sci').innerText = data.sci;
+                document.getElementById('dis-symp').innerHTML = data.symp;
+                document.getElementById('dis-cause').innerHTML = data.cause;
+                document.getElementById('dis-sol').innerHTML = data.sol;
+                infoBox.style.display = 'block';
+                infoBox.scrollIntoView({ behavior: 'smooth' });
             } else {
-                document.getElementById('info-btn').style.display = 'none';
-                document.getElementById('detail-section').style.display = 'none';
+                infoBox.style.display = 'none';
             }
-        }
-
-        function toggleInfo() {
-            const sec = document.getElementById('detail-section');
-            if (sec.style.display === 'block') {
-                sec.style.display = 'none';
-            } else {
-                sec.style.display = 'block';
-                const d = diseaseData[lastResultKey];
-                document.getElementById('current-disease-name').innerText = d.name;
-                document.getElementById('scientific-name').innerText = d.sci;
-                document.getElementById('definition-display').innerHTML = d.def;
-                document.getElementById('content-display').innerHTML = "Pilih kategori di atas.";
-                sec.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-
-        function showInfo(type) {
-            document.getElementById('content-display').innerHTML = diseaseData[lastResultKey][type];
         }
 
         loadModel();
