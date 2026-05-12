@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaddyCare AI - Scanner</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        
+        /* Frame untuk kamera/gambar */
+        #video-container { 
+            width: 100%; 
+            aspect-ratio: 1; 
+            background: #000; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 15px; 
+            border: 3px solid #8d7558;
+        }
+
+        video, img { width: 100%; height: 100%; object-fit: cover; }
+
+        .btn { 
+            background: #4a3728; color: white; padding: 12px 20px; border: none; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; 
+        }
+
+        .result-box { 
+            background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; 
+            border-left: 8px solid #8d7558; text-align: left;
+        }
+
+        #loading-msg { color: #8d7558; font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button class="btn" onclick="window.location.href='index.html'">← KEMBALI KE MENU</button>
+        
+        <h2>AI Paddy Scanner</h2>
+        <p id="loading-msg">Sila tunggu, model AI sedang dimuatkan...</p>
+
+        <div id="video-container">
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none"></canvas> <img id="preview" style="display:none">
+        </div>
+
+        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(event)">
+
+        <button class="btn" onclick="startCamera()">BUKA KAMERA</button>
+        <button class="btn" onclick="document.getElementById('file-input').click()">GALLERY</button>
+        <button class="btn" style="background:#8d7558" id="predict-btn" disabled onclick="predict()">ANALISIS DAUN</button>
+        
+        <div class="result-box">
+            <div id="status">Status: Menunggu Model...</div>
+            <div id="prediction"><strong>Hasil:</strong> -</div>
+        </div>
+    </div>
+
+    <script>
+        let model;
+        // Senarai kelas mengikut urutan dalam kod PictoBlox anda
+        const CLASS_LIST = [
+            'Bacteria Panicle Blight (Hawar Bulir Bakteria)',
+            'Brown Spot (Bintik Perang)',
+            'Oryza Sativa (Padi Normal)',
+            'Pseudomonas Fuscovaginae (Sambang)',
+            'Rice Blast (Karah)',
+            'Sheath Blight (Hawar Seludang)'
+        ];
+
+        // 1. Muatkan model TensorFlow.js
+        async function loadModel() {
+            try {
+                // Pastikan anda letak fail model.json dalam folder 'model_tfjs'
+                model = await tf.loadLayersModel('model_tfjs/model.json');
+                document.getElementById('loading-msg').innerText = "Model AI Ready!";
+                document.getElementById('status').innerText = "Status: Sedia untuk analisis";
+                document.getElementById('predict-btn').disabled = false;
+            } catch (err) {
+                document.getElementById('loading-msg').innerText = "Ralat muat model. Gunakan mod demo.";
+                console.error(err);
+            }
+        }
+
+        // 2. Fungsi Kamera
+        async function startCamera() {
+            const video = document.getElementById('webcam');
+            const preview = document.getElementById('preview');
+            preview.style.display = 'none';
+            video.style.display = 'block';
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+        }
+
+        // 3. Fungsi Gambar dari Gallery
+        function handleFile(event) {
+            const file = event.target.files[0];
+            const video = document.getElementById('webcam');
+            const preview = document.getElementById('preview');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    video.style.display = 'none';
+                    preview.style.display = 'block';
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 4. Proses Analisis (Sama seperti logik Python anda)
+        async function predict() {
+            const statusTarget = document.getElementById('status');
+            const resultTarget = document.getElementById('prediction');
+            statusTarget.innerText = "Status: Sedang Menganalisis...";
+
+            let imageElement;
+            const video = document.getElementById('webcam');
+            const preview = document.getElementById('preview');
+
+            // Tentukan sumber imej
+            if (video.style.display !== 'none') imageElement = video;
+            else imageElement = preview;
+
+            if (!model) {
+                // Mod Demo jika model tiada
+                setTimeout(() => {
+                    statusTarget.innerText = "Status: Selesai (Demo)";
+                    resultTarget.innerHTML = "<strong>Hasil:</strong> Karah Daun Detected";
+                }, 1500);
+                return;
+            }
+
+            // Logik Pre-processing (Resize ke 224x224 seperti kod PictoBlox)
+            const tensor = tf.browser.fromPixels(imageElement)
+                .resizeNearestNeighbor([224, 224])
+                .toFloat()
+                .expandDims();
+
+            const predictions = await model.predict(tensor).data();
+            const topIndex = predictions.indexOf(Math.max(...predictions));
+            
+            statusTarget.innerText = "Status: Analisis Selesai";
+            resultTarget.innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]}`;
+        }
+
+        loadModel();
+    </script>
+</body>
+</html>
