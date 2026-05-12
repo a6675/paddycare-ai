@@ -3,100 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaddyCare - Home</title>
+    <title>PaddyCare AI - Scanner</title>
     
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="logo_paddy.png">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     
     <style>
-        /* Reset margin dan padding asas */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: #3d2b24;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
-            overflow: hidden; /* Mengelakkan skrol jika imej penuh skrin */
+        body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
+        
+        /* Bekas utama untuk UI scanner */
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            background: #fdfaf5; 
+            color: #333; 
+            padding: 20px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+        }
+        
+        /* Frame video kamera */
+        #video-container { 
+            width: 100%; 
+            aspect-ratio: 1; 
+            background: #000; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 15px; 
+            border: 3px solid #8d7558; 
+            position: relative; /* Penting untuk butang switch terapung di dalam */
         }
 
-        /* Bekas utama untuk memegang imej latar dan butang */
-        .wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 1200px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
-            border-radius: 10px;
-            overflow: hidden;
+        video, img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Gaya butang tukar kamera (Bulat & Terapung) */
+        .switch-btn { 
+            position: absolute; 
+            bottom: 15px; 
+            right: 15px; 
+            background: rgba(0,0,0,0.7); 
+            color: white; 
+            border: 2px solid white; 
+            padding: 10px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            z-index: 100; 
+            width: 50px; 
+            height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 20px; 
         }
 
-        /* Gaya untuk logo yang terapung di atas imej */
-        .logo-container {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 8px 18px;
-            border-radius: 50px;
-            backdrop-filter: blur(5px);
+        /* Butang kawalan utama */
+        .btn { 
+            background: #4a3728; 
+            color: white; 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            margin: 5px 0; 
         }
 
-        .app-logo { width: 40px; height: 40px; }
-        .brand-name { color: #fff; font-weight: bold; }
-
-        .background-img { width: 100%; height: auto; display: block; }
-
-        /* Gaya am untuk kawasan klik (hitbox) folder */
-        .nav-link {
-            position: absolute;
-            top: 25%;
-            height: 60%;
-            cursor: pointer;
-            z-index: 10;
-            transition: 0.3s;
-            border-radius: 15px;
+        /* Kotak paparan hasil analisis */
+        .result-box { 
+            background: #eee; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border-left: 8px solid #8d7558; 
+            text-align: left; 
         }
 
-        /* Kedudukan spesifik untuk setiap folder berdasarkan gambar website.png */
-        .link-scanner { left: 5%; width: 28%; }
-        .link-modul { left: 36%; width: 28%; }
-        .link-about { left: 67%; width: 28%; }
-
-        /* Efek apabila tetikus menyentuh kawasan folder */
-        .nav-link:hover { 
-            background-color: rgba(255, 255, 255, 0.1); 
-            transform: scale(1.02); 
-        }
+        #loading-msg { color: #8d7558; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="wrapper">
-        <div class="logo-container">
-            <img src="logo_paddy.png" alt="Logo" class="app-logo">
-            <span class="brand-name">PaddyCare AI</span>
-        </div>
-
-        <img src="website.png" alt="Menu" class="background-img">
-
-        <a href="scanner.html" class="nav-link link-scanner" title="Buka Scanner"></a>
-        <a href="PaddyCareModul.pdf" target="_blank" class="nav-link link-modul" title="Lihat Modul"></a>
-        <a href="about.html" class="nav-link link-about" title="Tentang Kami"></a>
-    </div>
-
-    <script>
-        // Mendaftar Service Worker untuk membolehkan fungsi PWA (Offline)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log("Service Worker Berjaya Didaftar"))
-                .catch((err) => console.log("Gagal mendaftar Service Worker", err));
-        }
-    </script>
-</body>
-</html>
+    <div class="container">
