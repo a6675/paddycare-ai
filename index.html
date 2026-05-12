@@ -1,40 +1,102 @@
-<style>
-    /* ... kod sedia ada anda ... */
-
-    .logo-container {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        z-index: 100;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(61, 43, 36, 0.6); /* Transparan coklat gelap */
-        padding: 5px 15px;
-        border-radius: 50px;
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .app-logo {
-        width: 40px;
-        height: 40px;
-        object-fit: contain;
-    }
-
-    .brand-name {
-        color: #f4ece1;
-        font-weight: bold;
-        font-size: 1.1rem;
-        letter-spacing: 1px;
-    }
-</style>
-
-<div class="wrapper">
-    <div class="logo-container">
-        <img src="logo_paddy.png" alt="Logo" class="app-logo">
-        <span class="brand-name">PaddyCare AI</span>
-    </div>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaddyCare - Home</title>
     
-    <img src="website.png" alt="PaddyCare Home Menu" class="background-img">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="logo_paddy.png">
+    
+    <style>
+        /* Reset margin dan padding asas */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #3d2b24;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden; /* Mengelakkan skrol jika imej penuh skrin */
+        }
+
+        /* Bekas utama untuk memegang imej latar dan butang */
+        .wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* Gaya untuk logo yang terapung di atas imej */
+        .logo-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 18px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+        }
+
+        .app-logo { width: 40px; height: 40px; }
+        .brand-name { color: #fff; font-weight: bold; }
+
+        .background-img { width: 100%; height: auto; display: block; }
+
+        /* Gaya am untuk kawasan klik (hitbox) folder */
+        .nav-link {
+            position: absolute;
+            top: 25%;
+            height: 60%;
+            cursor: pointer;
+            z-index: 10;
+            transition: 0.3s;
+            border-radius: 15px;
+        }
+
+        /* Kedudukan spesifik untuk setiap folder berdasarkan gambar website.png */
+        .link-scanner { left: 5%; width: 28%; }
+        .link-modul { left: 36%; width: 28%; }
+        .link-about { left: 67%; width: 28%; }
+
+        /* Efek apabila tetikus menyentuh kawasan folder */
+        .nav-link:hover { 
+            background-color: rgba(255, 255, 255, 0.1); 
+            transform: scale(1.02); 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <div class="logo-container">
+            <img src="logo_paddy.png" alt="Logo" class="app-logo">
+            <span class="brand-name">PaddyCare AI</span>
+        </div>
+
+        <img src="website.png" alt="Menu" class="background-img">
+
+        <a href="scanner.html" class="nav-link link-scanner" title="Buka Scanner"></a>
+        <a href="PaddyCareModul.pdf" target="_blank" class="nav-link link-modul" title="Lihat Modul"></a>
+        <a href="about.html" class="nav-link link-about" title="Tentang Kami"></a>
     </div>
+
+    <script>
+        // Mendaftar Service Worker untuk membolehkan fungsi PWA (Offline)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("Service Worker Berjaya Didaftar"))
+                .catch((err) => console.log("Gagal mendaftar Service Worker", err));
+        }
+    </script>
+</body>
+</html>
