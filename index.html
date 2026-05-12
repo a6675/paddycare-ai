@@ -1,126 +1,40 @@
-<div id="main-menu">
-            <img src="logo_paddy.png" alt="PaddyCare Logo" class="main-logo">
-            
-            <h1>PaddyCare AI</h1>
-            <p>Smart Assistant for Healthy Rice Crops</p>
+<style>
+    /* ... kod sedia ada anda ... */
 
-            <div class="menu-grid">
-                <div class="folder-card" onclick="startScan()">
-                    <h2>Live Scan</h2>
-                    <p>Point your camera at rice leaves to detect pests and diseases in real-time.</p>
-                </div>
+    .logo-container {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(61, 43, 36, 0.6); /* Transparan coklat gelap */
+        padding: 5px 15px;
+        border-radius: 50px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
 
-                <div class="folder-card" onclick="triggerUpload()">
-                    <h2>Upload Image</h2>
-                    <p>Select a photo from your gallery for a detailed AI health analysis.</p>
-                    <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFileUpload(event)">
-                </div>
+    .app-logo {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+    }
 
-                <div class="folder-card" onclick="alert('Library content coming soon!')">
-                    <h2>Disease Library</h2>
-                    <p>Browse common rice diseases, symptoms, and treatment protocols.</p>
-                </div>
-            </div>
-        </div>
+    .brand-name {
+        color: #f4ece1;
+        font-weight: bold;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+    }
+</style>
 
-        <div id="scan-page">
-            <button class="btn-back" onclick="goBack()">← Back to Menu</button>
-            
-            <div class="scan-layout">
-                <div id="media-container">
-                    <video id="webcam" autoplay playsinline></video>
-                    <img id="uploaded-image" style="display:none;">
-                </div>
-
-                <div class="analysis-section">
-                    <div class="result-box">
-                        <h3>Analysis Result</h3>
-                        <div id="prediction">Waiting for input...</div>
-                        <div id="confidence"></div>
-                    </div>
-                    <div id="ai-status">Model Status: Loading...</div>
-                    <div class="controls">
-                        <button id="capture-btn" class="btn-action" onclick="predict()">Analyze Frame</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="wrapper">
+    <div class="logo-container">
+        <img src="logo_paddy.png" alt="Logo" class="app-logo">
+        <span class="brand-name">PaddyCare AI</span>
     </div>
-
-    <script>
-        let model;
-        const mainMenu = document.getElementById('main-menu');
-        const scanPage = document.getElementById('scan-page');
-        const video = document.getElementById('webcam');
-        const uploadedImg = document.getElementById('uploaded-image');
-
-        // Initializing the app
-        async function init() {
-            try {
-                // To use your actual model, place it in a /model folder and use:
-                // model = await tf.loadLayersModel('model/model.json');
-                document.getElementById('ai-status').innerText = "Model Status: Ready";
-            } catch (e) {
-                document.getElementById('ai-status').innerText = "Model Status: Ready (Offline Mode)";
-            }
-        }
-
-        function startScan() {
-            mainMenu.style.display = 'none';
-            scanPage.style.display = 'block';
-            uploadedImg.style.display = 'none';
-            video.style.display = 'block';
-            
-            navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" } 
-            }).then(stream => { 
-                video.srcObject = stream; 
-            }).catch(err => {
-                alert("Camera access denied or not available.");
-                goBack();
-            });
-        }
-
-        function triggerUpload() {
-            document.getElementById('file-input').click();
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    mainMenu.style.display = 'none';
-                    scanPage.style.display = 'block';
-                    video.style.display = 'none';
-                    uploadedImg.style.display = 'block';
-                    uploadedImg.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function goBack() {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-            scanPage.style.display = 'none';
-            mainMenu.style.display = 'flex';
-        }
-
-        async function predict() {
-            const statusBox = document.getElementById('prediction');
-            statusBox.innerText = "Analyzing...";
-            
-            // Artificial delay to simulate AI processing
-            setTimeout(() => {
-                statusBox.innerHTML = "<strong>Result:</strong> Healthy Leaf";
-                document.getElementById('confidence').innerText = "Confidence: 94%";
-            }, 800);
-        }
-
-        init();
-    </script>
-</body>
-</html>
+    
+    <img src="website.png" alt="PaddyCare Home Menu" class="background-img">
+    </div>
