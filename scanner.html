@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PaddyCare AI - Scanner</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
         .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
@@ -14,9 +12,24 @@
         #video-container { 
             width: 100%; aspect-ratio: 1; background: #000; border-radius: 10px; 
             overflow: hidden; margin-bottom: 15px; border: 3px solid #8d7558;
+            position: relative;
         }
 
         video, img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Butang Tukar Kamera di dalam frame video */
+        .switch-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 20;
+        }
 
         .btn { 
             background: #4a3728; color: white; padding: 12px 20px; border: none; 
@@ -37,11 +50,12 @@
         <button class="btn" onclick="window.location.href='index.html'">← KEMBALI KE MENU</button>
         
         <h2>AI Paddy Scanner</h2>
-        <p id="loading-msg">Sila tunggu, memuatkan fail model.json...</p>
+        <p id="loading-msg">Sila tunggu, memuatkan model AI...</p>
 
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
             <img id="preview" style="display:none">
+            <button id="btn-switch" class="switch-btn" onclick="switchCamera()">🔄 Tukar Kamera</button>
         </div>
 
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(event)">
@@ -56,98 +70,4 @@
         </div>
     </div>
 
-    <script>
-        let model;
-        
-        // Senarai kelas (Sesuai dengan kod PictoBlox anda)
-        const CLASS_LIST = [
-            'Bacteria Panicle Blight (Hawar Bulir Bakteria)',
-            'Brown Spot (Bintik Perang)',
-            'Oryza Sativa (Padi Normal)',
-            'Pseudomonas Fuscovaginae (Sambang)',
-            'Rice Blast (Karah)',
-            'Sheath Blight (Hawar Seludang)'
-        ];
-
-        // 1. Memuatkan Model TensorFlow.js dari folder model_tfjs
-        async function loadModel() {
-            const msg = document.getElementById('loading-msg');
-            try {
-                // Memanggil fail model.json yang anda muat naik tadi
-                model = await tf.loadLayersModel('model_tfjs/model.json');
-                msg.innerText = "Model AI Berjaya Dimuatkan!";
-                document.getElementById('status').innerText = "Status: Sedia untuk analisis";
-                document.getElementById('predict-btn').disabled = false;
-            } catch (err) {
-                msg.innerText = "RALAT: Gagal memuatkan fail .bin. Pastikan fail bin ada dalam folder model_tfjs.";
-                console.error(err);
-            }
-        }
-
-        // 2. Fungsi untuk mengaktifkan kamera belakang
-        async function startCamera() {
-            const video = document.getElementById('webcam');
-            const preview = document.getElementById('preview');
-            preview.style.display = 'none';
-            video.style.display = 'block';
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                alert("Kamera tidak dijumpai atau akses dinafikan.");
-            }
-        }
-
-        // 3. Fungsi memproses gambar dari gallery
-        function handleFile(event) {
-            const file = event.target.files[0];
-            const video = document.getElementById('webcam');
-            const preview = document.getElementById('preview');
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    video.style.display = 'none';
-                    preview.style.display = 'block';
-                    preview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // 4. Fungsi Analisis AI (Logik yang sama dengan kod Python/PictoBlox)
-        async function predict() {
-            const statusTarget = document.getElementById('status');
-            const resultTarget = document.getElementById('prediction');
-            
-            if (!model) return;
-
-            statusTarget.innerText = "Status: Sedang Menganalisis...";
-
-            // Mengambil imej dari kamera atau preview gallery
-            let imageElement = (document.getElementById('webcam').style.display !== 'none') ? 
-                                document.getElementById('webcam') : document.getElementById('preview');
-
-            // Pre-processing: Convert imej ke Tensor, Resize ke 224x224, Normalise
-            const tensor = tf.browser.fromPixels(imageElement)
-                .resizeNearestNeighbor([224, 224]) // Sama seperti cv2.resize(img, (224,224))
-                .toFloat()
-                .expandDims(); // Sama seperti tf.expand_dims(img, 0)
-
-            // Menjalankan ramalan
-            const predictions = await model.predict(tensor).data();
-            
-            // Mendapatkan index dengan nilai kebarangkalian tertinggi (Argmax)
-            const topIndex = predictions.indexOf(Math.max(...predictions));
-            
-            statusTarget.innerText = "Status: Analisis Selesai";
-            resultTarget.innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]}`;
-        }
-
-        // Jalankan fungsi muat model apabila halaman dibuka
-        loadModel();
-    </script>
-</body>
-</html>
+    <script
