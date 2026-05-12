@@ -4,94 +4,232 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PaddyCare AI - Scanner</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        #video-container { width: 100%; aspect-ratio: 1; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 3px solid #8d7558; position: relative; }
+        
+        /* Bekas utama untuk UI scanner */
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            background: #fdfaf5; 
+            color: #333; 
+            padding: 20px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+        }
+        
+        /* Frame video kamera */
+        #video-container { 
+            width: 100%; 
+            aspect-ratio: 1; 
+            background: #000; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 15px; 
+            border: 3px solid #8d7558; 
+            position: relative; /* Penting untuk butang switch terapung di dalam */
+        }
+
         video, img { width: 100%; height: 100%; object-fit: cover; }
-        .switch-btn { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.7); color: white; border: 2px solid white; padding: 10px; border-radius: 50%; cursor: pointer; z-index: 100; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .btn { background: #4a3728; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; }
-        .result-box { background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 8px solid #8d7558; text-align: left; }
+
+        /* Gaya butang tukar kamera (Bulat & Terapung) */
+        .switch-btn { 
+            position: absolute; 
+            bottom: 15px; 
+            right: 15px; 
+            background: rgba(0,0,0,0.7); 
+            color: white; 
+            border: 2px solid white; 
+            padding: 10px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            z-index: 100; 
+            width: 50px; 
+            height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 20px; 
+        }
+
+        /* Butang kawalan utama */
+        .btn { 
+            background: #4a3728; 
+            color: white; 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            margin: 5px 0; 
+        }
+
+        /* Kotak paparan hasil analisis */
+        .result-box { 
+            background: #eee; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border-left: 8px solid #8d7558; 
+            text-align: left; 
+        }
+
         #loading-msg { color: #8d7558; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <button class="btn" onclick="window.location.href='index.html'">← KEMBALI</button>
+        <button class="btn" onclick="window.location.href='index.html'">← KEMBALI KE MENU</button>
+        
         <h2>AI Paddy Scanner</h2>
-        <p id="loading-msg">Memuatkan Model AI...</p>
+        <p id="loading-msg">Sila tunggu, memuatkan model AI...</p>
 
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
             <img id="preview" style="display:none">
-            <button id="btn-switch" class="switch-btn" onclick="switchCamera()">🔄</button>
+            
+            <button id="btn-switch" class="switch-btn" onclick="switchCamera()" title="Tukar Kamera">🔄</button>
         </div>
 
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFile(event)">
+
         <button class="btn" onclick="startCamera()">BUKA KAMERA</button>
-        <button class="btn" onclick="document.getElementById('file-input').click()">GALERI</button>
+        <button class="btn" onclick="document.getElementById('file-input').click()">GALLERY (MUAT NAIK)</button>
+        
         <button class="btn" style="background:#8d7558" id="predict-btn" disabled onclick="predict()">ANALISIS SEKARANG</button>
         
         <div class="result-box">
-            <div id="status">Status: Menunggu...</div>
+            <div id="status">Status: Menunggu Model...</div>
             <div id="prediction"><strong>Hasil:</strong> -</div>
         </div>
     </div>
 
     <script>
-        let model;
-        let currentStream;
-        let useFrontCamera = false;
-        const CLASS_LIST = ['Bacteria Panicle Blight', 'Brown Spot', 'Normal', 'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'];
+        let model; // Simpan model AI
+        let currentStream; // Simpan stream kamera aktif
+        let useFrontCamera = false; // Status jenis kamera (false = belakang, true = depan)
 
+        // Senarai kelas penyakit (Mesti ikut urutan model PictoBlox anda)
+        const CLASS_LIST = [
+            'Bacteria Panicle Blight (Hawar Bulir Bakteria)',
+            'Brown Spot (Bintik Perang)',
+            'Oryza Sativa (Padi Normal)',
+            'Pseudomonas Fuscovaginae (Sambang)',
+            'Rice Blast (Karah)',
+            'Sheath Blight (Hawar Seludang)'
+        ];
+
+        /**
+         * 1. MEMUATKAN MODEL AI
+         * Memanggil fail model.json yang merujuk kepada fail-fail .bin anda.
+         */
         async function loadModel() {
             try {
-                // Sila pastikan fail model.json ada dalam folder model_tfjs
+                // model.json akan menarik group1-shard1of4.bin secara automatik
                 model = await tf.loadLayersModel('model_tfjs/model.json');
-                document.getElementById('loading-msg').innerText = "Model Sedia!";
-                document.getElementById('predict-btn').disabled = false;
+                document.getElementById('loading-msg').innerText = "Model AI Sedia!";
+                document.getElementById('predict-btn').disabled = false; // Aktifkan butang analisis
+                document.getElementById('status').innerText = "Status: Sedia untuk analisis";
             } catch (err) {
-                document.getElementById('loading-msg').innerText = "Ralat muat fail .bin!";
+                document.getElementById('loading-msg').innerText = "Ralat: Fail .bin tidak dijumpai!";
+                console.error(err);
             }
         }
 
+        /**
+         * 2. MULA KAMERA
+         * Menutup stream lama dan membuka kamera baru berdasarkan 'facingMode'.
+         */
         async function startCamera() {
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+            // Tutup kamera lama jika sedang berjalan
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
             const video = document.getElementById('webcam');
-            document.getElementById('preview').style.display = 'none';
+            const preview = document.getElementById('preview');
+            preview.style.display = 'none';
             video.style.display = 'block';
+
+            // Pilih kamera: 'user' (depan/selfie) atau 'environment' (belakang)
             const mode = useFrontCamera ? "user" : "environment";
+
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: mode } 
+                });
                 video.srcObject = currentStream;
-            } catch (e) { alert("Kamera ralat!"); }
+            } catch (err) {
+                alert("Ralat Kamera: " + err);
+            }
         }
 
-        function switchCamera() { useFrontCamera = !useFrontCamera; startCamera(); }
+        /**
+         * 3. TUKAR KAMERA
+         * Menukar status antara kamera depan/belakang dan memulakan semula kamera.
+         */
+        function switchCamera() {
+            useFrontCamera = !useFrontCamera; // Terbalikkan nilai boolean
+            startCamera(); // Refresh stream kamera
+        }
 
+        /**
+         * 4. MUAT NAIK GAMBAR
+         * Memaparkan gambar yang dipilih dari galeri telefon.
+         */
         function handleFile(event) {
             const file = event.target.files[0];
             if (file) {
+                if (currentStream) currentStream.getTracks().forEach(t => t.stop()); // Henti kamera
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('webcam').style.display = 'none';
-                    const p = document.getElementById('preview');
-                    p.style.display = 'block'; p.src = e.target.result;
+                    const preview = document.getElementById('preview');
+                    preview.style.display = 'block';
+                    preview.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             }
         }
 
+        /**
+         * 5. ANALISIS AI (PREDICT)
+         * Mengambil data piksel, resize ke 224x224, dan jalankan model.
+         */
         async function predict() {
-            document.getElementById('status').innerText = "Menganalisis...";
-            const img = document.getElementById('webcam').style.display !== 'none' ? document.getElementById('webcam') : document.getElementById('preview');
-            const tensor = tf.browser.fromPixels(img).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
-            const pred = await model.predict(tensor).data();
-            const idx = pred.indexOf(Math.max(...pred));
-            document.getElementById('status').innerText = "Selesai";
-            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[idx]}`;
+            const statusTarget = document.getElementById('status');
+            const resultTarget = document.getElementById('prediction');
+            
+            if (!model) return;
+
+            statusTarget.innerText = "Status: Menganalisis...";
+
+            // Pilih elemen mana yang sedang dipaparkan (Video atau Gambar)
+            let imageElement = (document.getElementById('webcam').style.display !== 'none') ? 
+                                document.getElementById('webcam') : document.getElementById('preview');
+
+            // --- PROSES TENSOR (Sama seperti logik Python) ---
+            const tensor = tf.browser.fromPixels(imageElement)
+                .resizeNearestNeighbor([224, 224]) // Resize ikut saiz input model
+                .toFloat()
+                .expandDims(); // Tambah batch dimension [1, 224, 224, 3]
+
+            // Jalankan model
+            const predictions = await model.predict(tensor).data();
+            
+            // Cari index kelas dengan peratusan tertinggi
+            const topIndex = predictions.indexOf(Math.max(...predictions));
+            
+            statusTarget.innerText = "Status: Selesai";
+            resultTarget.innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]}`;
         }
+
+        // Jalankan pemuatan model sebaik sahaja halaman dibuka
         loadModel();
     </script>
 </body>
