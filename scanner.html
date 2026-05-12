@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaddyCare AI - Scanner & Info</title>
+    <title>PaddyCare AI - Scanner & Info Full</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     
@@ -30,11 +30,12 @@
         #loading-msg { color: #8d7558; font-weight: bold; margin-bottom: 10px; }
 
         /* Gaya Kotak Info Automatik */
-        #auto-info { display: none; margin-top: 15px; text-align: left; background: #fff; padding: 15px; border-radius: 10px; border-top: 5px solid #b03a2e; }
-        .info-header h3 { color: #b03a2e; margin: 0; text-transform: uppercase; }
-        .info-header p { font-style: italic; font-size: 13px; color: #666; margin-bottom: 10px; }
-        h4 { margin: 15px 0 5px 0; color: #2e7d32; font-size: 15px; border-bottom: 1px solid #eee; }
-        ul { margin: 0; padding-left: 20px; font-size: 14px; }
+        #auto-info { display: none; margin-top: 20px; text-align: left; background: #fff; padding: 20px; border-radius: 10px; border-top: 6px solid #b03a2e; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .info-header h3 { color: #b03a2e; margin: 0; text-transform: uppercase; font-size: 20px; }
+        .info-header p { font-style: italic; font-size: 13px; color: #666; margin-bottom: 15px; }
+        h4 { margin: 15px 0 5px 0; color: #2e7d32; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+        ul { margin: 0; padding-left: 20px; font-size: 14px; color: #444; }
+        li { margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -72,6 +73,7 @@
             <div id="dis-cause"></div>
             <h4>Penyelesaian:</h4>
             <div id="dis-sol"></div>
+            <button class="btn" style="background:#8d7558; margin-top:15px;" onclick="document.getElementById('auto-info').style.display='none'">TUTUP INFO</button>
         </div>
     </div>
 
@@ -80,142 +82,7 @@
         let currentStream; 
         let useFrontCamera = false; 
 
-        // 1. Senarai kelas model AI anda
+        // 1. Label kelas (Mesti sama dengan susunan masa training model)
         const CLASS_LIST = [
             'Bacteria Panicle Blight', 'Brown Spot', 'Oryza Sativa (Normal)', 
-            'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'
-        ];
-
-        // 2. Database Maklumat (Sync dengan CLASS_LIST)
-        const DISEASE_DB = {
-            'Sheath Blight': {
-                name: "Hawar Seludang", sci: "Rhizoctonia solani",
-                symp: "<ul><li>Lesi coklat pada seludang padi</li><li>Pokok kelihatan seperti terbakar</li></ul>",
-                cause: "<ul><li>Kulat tanah yang tersebar melalui air</li></ul>",
-                sol: "<ul><li>Gunakan racun kulat bersesuaian</li><li>Jarakkan tanaman</li></ul>"
-            },
-            'Rice Blast': {
-                name: "Karah Padi", sci: "Pyricularia oryzae",
-                symp: "<ul><li>Tompok berbentuk berlian pada daun</li><li>Leher tangkai padi menjadi reput/patah</li></ul>",
-                cause: "<ul><li>Spora kulat dibawa angin dan kelembapan tinggi</li></ul>",
-                sol: "<ul><li>Elakkan baja Nitrogen berlebihan</li><li>Gunakan varieti padi tahan karah</li></ul>"
-            },
-            'Bacteria Panicle Blight': {
-                name: "Hawar Bulir Bakteria", sci: "Burkholderia glumae",
-                symp: "<ul><li>Bulir padi menjadi kosong atau hitam</li><li>Tangkai padi tegak mendongak</li></ul>",
-                cause: "<ul><li>Bakteria yang menjangkiti semasa pembungaan</li></ul>",
-                sol: "<ul><li>Gunakan benih yang bebas penyakit</li><li>Ubah tarikh penanaman</li></ul>"
-            },
-            'Brown Spot': {
-                name: "Bintik Perang", sci: "Helminthosporium oryzae",
-                symp: "<ul><li>Bintik coklat bulat pada daun</li><li>Kualiti bijirin merosot</li></ul>",
-                cause: "<ul><li>Tanah yang kurang nutrien atau air</li></ul>",
-                sol: "<ul><li>Pastikan pembajaan seimbang (Potassium)</li><li>Kawal bekalan air</li></ul>"
-            },
-            'Pseudomonas Fuscovaginae': {
-                name: "Sambang (Sheath Brown Rot)", sci: "Pseudomonas fuscovaginae",
-                symp: "<ul><li>Seludang daun menjadi coklat gelap/lebam</li><li>Bulir tidak berisi penuh</li></ul>",
-                cause: "<ul><li>Jangkitan bakteria semasa cuaca sejuk/lembap</li></ul>",
-                sol: "<ul><li>Pastikan sanitasi ladang yang baik</li><li>Gunakan benih sihat</li></ul>"
-            }
-        };
-
-        async function loadModel() {
-            try {
-                model = await tf.loadLayersModel('model_tfjs/model.json');
-                document.getElementById('loading-msg').innerText = "Model AI Sedia!";
-                document.getElementById('predict-btn').disabled = false;
-            } catch (err) {
-                document.getElementById('loading-msg').innerText = "Ralat: Gagal muat fail AI!";
-            }
-        }
-
-        async function startCamera() {
-            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
-            const video = document.getElementById('webcam');
-            const preview = document.getElementById('preview');
-            preview.style.display = 'none';
-            video.style.display = 'block';
-            const mode = useFrontCamera ? "user" : "environment";
-            try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: mode, width: { ideal: 720 }, height: { ideal: 720 } } 
-                });
-                video.srcObject = currentStream;
-                video.onloadedmetadata = () => { video.play(); };
-            } catch (err) { alert("Kamera gagal diakses."); }
-        }
-
-        function switchCamera() { useFrontCamera = !useFrontCamera; if (currentStream) startCamera(); }
-
-        function handleFile(event) {
-            const file = event.target.files[0];
-            if (file) {
-                if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('webcam').style.display = 'none';
-                    const preview = document.getElementById('preview');
-                    preview.style.display = 'block';
-                    preview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        async function predict() {
-            if (!model) return;
-            const video = document.getElementById('webcam');
-            const preview = document.getElementById('preview');
-            const statusTarget = document.getElementById('status');
-            const infoBox = document.getElementById('auto-info');
-
-            statusTarget.innerText = "Status: Menangkap Gambar...";
-
-            if (video.style.display !== 'none') {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                preview.src = canvas.toDataURL('image/png');
-                preview.style.display = 'block';
-                video.style.display = 'none';
-                if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
-            }
-
-            statusTarget.innerText = "Status: Menganalisis...";
-
-            const tensor = tf.browser.fromPixels(preview)
-                .resizeNearestNeighbor([224, 224])
-                .toFloat()
-                .expandDims();
-
-            const predictions = await model.predict(tensor).data();
-            const topIndex = predictions.indexOf(Math.max(...predictions));
-            const confidence = (Math.max(...predictions) * 100).toFixed(1);
-            const resultLabel = CLASS_LIST[topIndex];
-
-            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${resultLabel} <br><small>Keyakinan: ${confidence}%</small>`;
-            statusTarget.innerText = "Status: Selesai";
-
-            // --- FUNGSI AUTO INFO START ---
-            if (DISEASE_DB[resultLabel]) {
-                const data = DISEASE_DB[resultLabel];
-                document.getElementById('dis-name').innerText = data.name;
-                document.getElementById('dis-sci').innerText = "Nama Saintifik: " + data.sci;
-                document.getElementById('dis-symp').innerHTML = data.symp;
-                document.getElementById('dis-cause').innerHTML = data.cause;
-                document.getElementById('dis-sol').innerHTML = data.sol;
-                infoBox.style.display = 'block'; // Paparkan kotak info
-                infoBox.scrollIntoView({ behavior: 'smooth' }); // Skrol automatik ke bawah
-            } else {
-                infoBox.style.display = 'none'; // Sembunyikan jika hasil adalah 'Normal'
-            }
-            // --- FUNGSI AUTO INFO END ---
-        }
-
-        loadModel();
-    </script>
-</body>
-</html>
+            'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight
