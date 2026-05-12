@@ -38,8 +38,8 @@
         <p id="loading-msg">Memuatkan model AI...</p>
 
         <div id="video-container">
-            <video id="webcam" autoplay playsinline></video>
-            <img id="preview" style="display:none">
+            <video id="webcam" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></video>
+            <img id="preview" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
         </div>
 
         <button type="button" class="btn-switch" onclick="switchCamera()">
@@ -69,33 +69,30 @@
             'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'
         ];
 
-        // Memuatkan model
         async function loadModel() {
             try {
                 model = await tf.loadLayersModel('model_tfjs/model.json');
                 document.getElementById('loading-msg').innerText = "Model AI Sedia!";
                 document.getElementById('predict-btn').disabled = false;
             } catch (err) {
-                document.getElementById('loading-msg').innerText = "Ralat: Fail model tidak dijumpai!";
+                document.getElementById('loading-msg').innerText = "Ralat: Gagal muat fail AI!";
             }
         }
 
-        // Memulakan kamera
         async function startCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
-
             const video = document.getElementById('webcam');
             const preview = document.getElementById('preview');
             preview.style.display = 'none';
             video.style.display = 'block';
 
             const mode = useFrontCamera ? "user" : "environment";
-
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
                 video.srcObject = currentStream;
+                video.play();
             } catch (err) {
                 alert("Kamera gagal diakses.");
             }
@@ -121,7 +118,6 @@
             }
         }
 
-        // FUNGSI PREDICT DENGAN FREEZE (SNAP)
         async function predict() {
             if (!model) return;
 
@@ -129,40 +125,55 @@
             const preview = document.getElementById('preview');
             const statusTarget = document.getElementById('status');
 
-            // Langkah 1: Jika video sedang aktif, tangkap gambar (FREEZE)
-            if (video.style.display !== 'none') {
-                statusTarget.innerText = "Status: Merakam gambar...";
+            statusTarget.innerText = "Status: Menganalisis...";
 
+            // Determine image source
+            let imgSource;
+            if (video.style.display !== 'none' && video.readyState >= video.HAVE_CURRENT_DATA) {
+                // If live video is active and has data, snap a frame
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Masukkan hasil snap ke dalam elemen preview (IMG)
+                canvas.getContext('2d').drawImage(video, 0, 0);
                 preview.src = canvas.toDataURL('image/png');
-                preview.style.display = 'block';
-                video.style.display = 'none';
-
-                // Berhentikan stream kamera untuk elakkan gegaran/beban CPU
+                imgSource = preview;
+                
+                // Optional: Stop current stream after snap to save resources
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
+                
+                // Show the snapped frame, hide video
+                preview.style.display = 'block';
+                video.style.display = 'none';
+            } else if (preview.style.display !== 'none' && preview.src) {
+                // If a gallery image is already showing, use that
+                imgSource = preview;
+            } else {
+                 statusTarget.innerText = "Status: Sedia (Tiada Imej)";
+                 return; // No image source available
             }
 
-            statusTarget.innerText = "Status: Menganalisis...";
-
-            // Langkah 2: Proses AI menggunakan gambar preview tadi
-            const tensor = tf.browser.fromPixels(preview)
+            // Process with TensorFlow.js
+            const tensor = tf.browser.fromPixels(imgSource)
                 .resizeNearestNeighbor([224, 224])
                 .toFloat()
                 .expandDims();
 
             const predictions = await model.predict(tensor).data();
-            const topIndex = predictions.indexOf(Math.max(...predictions));
+            
+            const maxConfidence = Math.max(...predictions);
+            const topIndex = predictions.indexOf(maxConfidence);
+            
+            const THRESHOLD = 0.6; 
+
+            if (maxConfidence < THRESHOLD) {
+                document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> <span style="color:red;">Padi Tidak Dikenal Pasti</span><br><small>(Sila ambil gambar yang lebih jelas)</small>`;
+            } else {
+                document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]} <br><small>Keyakinan: ${(maxConfidence * 100).toFixed(1)}%</small>`;
+            }
             
             statusTarget.innerText = "Status: Selesai";
-            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]}`;
         }
 
         loadModel();
