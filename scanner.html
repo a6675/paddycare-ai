@@ -8,47 +8,24 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     
     <style>
-        /* Gaya visual halaman utama */
         body { font-family: 'Segoe UI', sans-serif; background: #7c584a; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #fdfaf5; color: #333; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         
-        .container { 
-            max-width: 500px; 
-            margin: auto; 
-            background: #fdfaf5; 
-            color: #333; 
-            padding: 20px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
-        }
-        
-        /* Kotak paparan kamera */
         #video-container { 
             width: 100%; aspect-ratio: 1; background: #000; border-radius: 10px; 
             overflow: hidden; margin-bottom: 15px; border: 3px solid #8d7558; position: relative;
         }
-
         video, img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Butang Tukar Kamera (Oren) */
         .btn-switch {
-            background: #e67e22; 
-            color: white;
-            border: 2px solid #d35400;
-            padding: 12px 25px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 10px auto 20px auto;
-            display: block;
-            width: 85%;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            background: #e67e22; color: white; border: 2px solid #d35400;
+            padding: 12px 25px; border-radius: 50px; cursor: pointer;
+            font-weight: bold; margin: 10px auto 20px auto; display: block; width: 85%;
         }
 
-        /* Gaya butang kawalan utama */
         .btn { background: #4a3728; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         
-        /* Kotak keputusan analisis */
         .result-box { background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 8px solid #8d7558; text-align: left; }
         #loading-msg { color: #8d7558; font-weight: bold; margin-bottom: 10px; }
     </style>
@@ -57,9 +34,8 @@
 
     <div class="container">
         <button class="btn" onclick="window.location.href='index.html'">← KEMBALI KE MENU</button>
-        
         <h2>AI Paddy Scanner</h2>
-        <p id="loading-msg">Sila tunggu, memuatkan model AI...</p>
+        <p id="loading-msg">Memuatkan model AI...</p>
 
         <div id="video-container">
             <video id="webcam" autoplay playsinline></video>
@@ -88,28 +64,23 @@
         let currentStream; 
         let useFrontCamera = false; 
 
-        // Senarai kategori penyakit
         const CLASS_LIST = [
-            'Bacteria Panicle Blight (Hawar Bulir Bakteria)', 
-            'Brown Spot (Bintik Perang)', 
-            'Oryza Sativa (Padi Normal)', 
-            'Pseudomonas Fuscovaginae (Sambang)', 
-            'Rice Blast (Karah)', 
-            'Sheath Blight (Hawar Seludang)'
+            'Bacteria Panicle Blight', 'Brown Spot', 'Oryza Sativa (Normal)', 
+            'Pseudomonas Fuscovaginae', 'Rice Blast', 'Sheath Blight'
         ];
 
-        // 1. Muatkan Model AI
+        // Memuatkan model
         async function loadModel() {
             try {
                 model = await tf.loadLayersModel('model_tfjs/model.json');
                 document.getElementById('loading-msg').innerText = "Model AI Sedia!";
                 document.getElementById('predict-btn').disabled = false;
             } catch (err) {
-                document.getElementById('loading-msg').innerText = "Ralat: Fail AI tidak dijumpai!";
+                document.getElementById('loading-msg').innerText = "Ralat: Fail model tidak dijumpai!";
             }
         }
 
-        // 2. Aktifkan Kamera
+        // Memulakan kamera
         async function startCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -117,35 +88,84 @@
 
             const video = document.getElementById('webcam');
             const preview = document.getElementById('preview');
-            
             preview.style.display = 'none';
             video.style.display = 'block';
 
             const mode = useFrontCamera ? "user" : "environment";
 
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: mode } 
-                });
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
                 video.srcObject = currentStream;
             } catch (err) {
-                alert("Ralat kamera: Sila benarkan akses kamera.");
+                alert("Kamera gagal diakses.");
             }
         }
 
-        // 3. Tukar Kamera (Selfie/Belakang)
         function switchCamera() {
             useFrontCamera = !useFrontCamera;
-            if (currentStream) {
-                startCamera();
-            } else {
-                alert("Sila aktifkan kamera dahulu.");
-            }
+            if (currentStream) startCamera();
         }
 
-        // 4. Pilih fail dari Galeri
         function handleFile(event) {
             const file = event.target.files[0];
             if (file) {
                 if (currentStream) currentStream.getTracks().forEach(t => t.stop());
                 const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('webcam').style.display = 'none';
+                    const preview = document.getElementById('preview');
+                    preview.style.display = 'block';
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // FUNGSI PREDICT DENGAN FREEZE (SNAP)
+        async function predict() {
+            if (!model) return;
+
+            const video = document.getElementById('webcam');
+            const preview = document.getElementById('preview');
+            const statusTarget = document.getElementById('status');
+
+            // Langkah 1: Jika video sedang aktif, tangkap gambar (FREEZE)
+            if (video.style.display !== 'none') {
+                statusTarget.innerText = "Status: Merakam gambar...";
+
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Masukkan hasil snap ke dalam elemen preview (IMG)
+                preview.src = canvas.toDataURL('image/png');
+                preview.style.display = 'block';
+                video.style.display = 'none';
+
+                // Berhentikan stream kamera untuk elakkan gegaran/beban CPU
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+            }
+
+            statusTarget.innerText = "Status: Menganalisis...";
+
+            // Langkah 2: Proses AI menggunakan gambar preview tadi
+            const tensor = tf.browser.fromPixels(preview)
+                .resizeNearestNeighbor([224, 224])
+                .toFloat()
+                .expandDims();
+
+            const predictions = await model.predict(tensor).data();
+            const topIndex = predictions.indexOf(Math.max(...predictions));
+            
+            statusTarget.innerText = "Status: Selesai";
+            document.getElementById('prediction').innerHTML = `<strong>Hasil:</strong> ${CLASS_LIST[topIndex]}`;
+        }
+
+        loadModel();
+    </script>
+</body>
+</html>
